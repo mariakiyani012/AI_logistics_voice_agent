@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from ..database import db
 from ..models import CallTrigger, CallResponse, CallListResponse, SummaryResponse, MessageResponse
+from ..services.retell_service import retell_service
 import logging
 import uuid
 
@@ -32,7 +33,30 @@ async def trigger_call(call_data: CallTrigger):
         if not created_call:
             raise HTTPException(status_code=400, detail="Failed to create call")
         
-        # TODO: Integrate Retell AI call creation
+        # Integrate Retell AI call creation
+        metadata = {
+            "call_id": created_call["id"],
+            "driver_name": call_data.driver_name,
+            "load_number": call_data.load_number
+        }
+        
+        retell_response = await retell_service.create_retell_call(
+            phone_number=call_data.driver_phone,
+            agent_config=agent,
+            metadata=metadata
+        )
+        
+        if retell_response:
+            # Update call with Retell call ID
+            await db.update_call_status(
+                created_call["id"], 
+                "in_progress",
+                retell_call_id=retell_response.get("call_id")
+            )
+            logger.info(f"Retell call created: {retell_response.get('call_id')}")
+        else:
+            logger.warning("Failed to create Retell call, but call record saved")
+
         logger.info(f"Call triggered: {created_call['id']}")
         
         return CallResponse(**created_call)

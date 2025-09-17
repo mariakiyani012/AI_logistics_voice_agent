@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from ..database import db
 import logging
 import json
+from ..services.data_processor import data_processor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhook", tags=["webhooks"])
@@ -42,13 +43,15 @@ async def handle_call_started(payload):
     try:
         retell_call_id = payload.get("call_id")
         metadata = payload.get("metadata", {})
+        internal_call_id = metadata.get("call_id")
         
-        # Find call by metadata or other identifier
-        # For now, just log the event
-        logger.info(f"Call started: {retell_call_id}")
-        
-        # TODO: Update call status in database
-        # await db.update_call_status(call_id, "in_progress", retell_call_id=retell_call_id)
+        if internal_call_id:
+            await db.update_call_status(
+                internal_call_id, 
+                "in_progress",
+                retell_call_id=retell_call_id
+            )
+            logger.info(f"Call started: {retell_call_id} -> {internal_call_id}")
         
     except Exception as e:
         logger.error(f"Error handling call_started: {str(e)}")
@@ -58,15 +61,27 @@ async def handle_call_ended(payload):
     try:
         retell_call_id = payload.get("call_id")
         transcript = payload.get("transcript", "")
+        metadata = payload.get("metadata", {})
+        internal_call_id = metadata.get("call_id")
         
-        logger.info(f"Call ended: {retell_call_id}")
-        
-        # TODO: Update call status and process transcript
-        # await db.update_call_status(call_id, "completed", transcript=transcript)
-        # await data_processor.process_completed_call(call_id, transcript)
+        if internal_call_id:
+            # Update call status
+            await db.update_call_status(
+                internal_call_id, 
+                "completed",
+                transcript=transcript,
+                ended_at=payload.get("end_timestamp")
+            )
+            
+            # Process transcript for structured data
+            if transcript:
+                await data_processor.process_completed_call(internal_call_id, transcript)
+            
+            logger.info(f"Call completed: {retell_call_id} -> {internal_call_id}")
         
     except Exception as e:
         logger.error(f"Error handling call_ended: {str(e)}")
+
 
 async def handle_call_analyzed(payload):
     """Handle call analysis completion"""
