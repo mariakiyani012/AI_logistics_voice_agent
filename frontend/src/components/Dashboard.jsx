@@ -1,4 +1,3 @@
-/ frontend/src/components/Dashboard.jsx
 import React, { useState } from 'react';
 import { Settings, Phone, History, Menu, X } from 'lucide-react';
 import AgentConfig from './AgentConfig';
