@@ -1,0 +1,10 @@
+# backend/requirements.txt
+fastapi==0.116.2
+uvicorn[standard]==0.35.0
+pydantic==2.11.9
+pydantic-settings==2.10.1
+python-dotenv==1.1.1
+supabase==2.18.1
+openai==1.107.3
+httpx==0.28.1
+python-multipart==0.0.20
