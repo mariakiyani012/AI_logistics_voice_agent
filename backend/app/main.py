@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from .config import settings
+from .routers import agent
 
 app = FastAPI(title="AI Voice Agent API", version="1.0.0")
 
@@ -28,6 +29,8 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0"
     }
+
+app.include_router(agent.router, prefix="/api")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
