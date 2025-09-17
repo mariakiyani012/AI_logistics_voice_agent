@@ -72,3 +72,58 @@ class MessageResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
+
+
+# Call Models
+CallStatus = Literal["pending", "in_progress", "completed", "failed", "cancelled"]
+
+class CallTrigger(BaseModel):
+    agent_id: str = Field(..., description="Agent ID to use for the call")
+    driver_name: str = Field(..., min_length=1, max_length=100)
+    driver_phone: str = Field(..., regex=r'^\+?1?[0-9]{10,15}$')
+    load_number: str = Field(..., min_length=1, max_length=50)
+
+class CallResponse(BaseModel):
+    id: str
+    agent_id: str
+    retell_call_id: Optional[str] = None
+    driver_name: str
+    driver_phone: str
+    load_number: str
+    status: CallStatus
+    transcript: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class CallListResponse(BaseModel):
+    calls: list[CallResponse]
+    total: int
+
+# Summary Models
+class SummaryResponse(BaseModel):
+    id: str
+    call_id: str
+    call_outcome: Optional[str] = None
+    driver_status: Optional[str] = None
+    current_location: Optional[str] = None
+    eta: Optional[str] = None
+    emergency_type: Optional[str] = None
+    emergency_location: Optional[str] = None
+    escalation_status: Optional[str] = None
+    structured_data: Dict[str, Any]
+    full_transcript: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Generic response models
+class MessageResponse(BaseModel):
+    message: str
+
+class ErrorResponse(BaseModel):
+    error: str
+    detail: Optional[str] = None
