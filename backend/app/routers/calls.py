@@ -1,13 +1,31 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from ..database import db
-from ..models import CallTrigger, CallResponse, CallListResponse, SummaryResponse, MessageResponse
+from ..models import CallTrigger, CallResponse, CallListResponse, SummaryResponse, MessageResponse, ApiResponse
 from ..services.retell_service import retell_service
 import logging
 import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calls", tags=["calls"])
+
+@router.get("/retell-info", response_model=ApiResponse)
+async def get_retell_account_info():
+    """Get Retell AI account information including phone numbers and balance"""
+    try:
+        connection_status = await retell_service.test_connection()
+        
+        return ApiResponse(
+            success=connection_status.get("connected", False),
+            message="Retell account info retrieved" if connection_status.get("connected") else "Retell connection failed",
+            data=connection_status
+        )
+    except Exception as e:
+        logger.error(f"Error checking Retell: {str(e)}")
+        return ApiResponse(
+            success=False,
+            message=f"Error checking Retell: {str(e)}"
+        )
 
 @router.post("/trigger", response_model=CallResponse, status_code=201)
 async def trigger_call(call_data: CallTrigger):
@@ -46,7 +64,7 @@ async def trigger_call(call_data: CallTrigger):
             metadata=metadata
         )
         
-        if retell_response:
+        if retell_response and not retell_response.get("error"):
             # Update call with Retell call ID
             await db.update_call_status(
                 created_call["id"], 
@@ -55,7 +73,8 @@ async def trigger_call(call_data: CallTrigger):
             )
             logger.info(f"Retell call created: {retell_response.get('call_id')}")
         else:
-            logger.warning("Failed to create Retell call, but call record saved")
+            error_msg = retell_response.get("details", "Unknown error") if retell_response else "No response"
+            logger.warning(f"Failed to create Retell call: {error_msg}, but call record saved")
 
         logger.info(f"Call triggered: {created_call['id']}")
         

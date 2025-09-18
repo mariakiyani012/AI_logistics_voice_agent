@@ -64,7 +64,7 @@ class Database:
             logger.error(f"Failed to update agent: {str(e)}")
             return None
     
-    # Call functions
+    # Call functions with enhanced Retell support
     async def insert_call(self, call_data: Dict[str, Any]) -> Optional[Dict]:
         """Insert new call"""
         try:
@@ -74,10 +74,22 @@ class Database:
             logger.error(f"Failed to insert call: {str(e)}")
             return None
     
-    async def update_call_status(self, call_id: str, status: CallStatus, **kwargs) -> Optional[Dict]:
+    async def update_call_status(self, call_id: str, status: CallStatus = None, **kwargs) -> Optional[Dict]:
         """Update call status and other fields"""
         try:
-            update_data = {"status": status, **kwargs}
+            update_data = {}
+            
+            # Only update status if provided
+            if status is not None:
+                update_data["status"] = status
+            
+            # Add all other fields
+            update_data.update(kwargs)
+            
+            # Don't update if no data to update
+            if not update_data:
+                return None
+            
             result = self.client.table("calls").update(update_data).eq("id", call_id).execute()
             return result.data[0] if result.data else None
         except Exception as e:
@@ -93,6 +105,15 @@ class Database:
             logger.error(f"Failed to get call: {str(e)}")
             return None
     
+    async def get_call_by_retell_id(self, retell_call_id: str) -> Optional[Dict]:
+        """Get call by Retell call ID"""
+        try:
+            result = self.client.table("calls").select("*, agents(name, scenario_type)").eq("retell_call_id", retell_call_id).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error(f"Failed to get call by retell_call_id: {str(e)}")
+            return None
+    
     async def get_calls_history(self, limit: int = 50) -> List[Dict]:
         """Get calls history with agent info"""
         try:
@@ -104,13 +125,22 @@ class Database:
             logger.error(f"Failed to get calls history: {str(e)}")
             return []
     
-    # Summary functions
+    # Summary functions with enhanced error handling
     async def insert_summary(self, summary_data: Dict[str, Any]) -> Optional[Dict]:
         """Insert call summary"""
         try:
             # Ensure structured_data has a default if not provided
             if 'structured_data' not in summary_data:
                 summary_data['structured_data'] = {}
+            
+            # Ensure confidence_score is a float
+            if 'confidence_score' in summary_data:
+                summary_data['confidence_score'] = float(summary_data['confidence_score'])
+            
+            # Ensure processing_errors is a list
+            if 'processing_errors' in summary_data:
+                if not isinstance(summary_data['processing_errors'], list):
+                    summary_data['processing_errors'] = []
             
             result = self.client.table("summaries").insert(summary_data).execute()
             return result.data[0] if result.data else None
@@ -127,7 +157,16 @@ class Database:
             logger.error(f"Failed to get summary: {str(e)}")
             return None
     
-    # Test functions (updated for refined schema)
+    async def update_summary(self, call_id: str, summary_data: Dict[str, Any]) -> Optional[Dict]:
+        """Update existing summary"""
+        try:
+            result = self.client.table("summaries").update(summary_data).eq("call_id", call_id).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error(f"Failed to update summary: {str(e)}")
+            return None
+    
+    # Enhanced test functions
     async def insert_test_agent(self) -> Optional[Dict]:
         """Insert a test agent for verification"""
         try:
@@ -149,6 +188,43 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to insert test agent: {str(e)}")
             return None
+    
+    async def get_call_statistics(self) -> Dict[str, Any]:
+        """Get call statistics for monitoring"""
+        try:
+            # Get total calls
+            total_calls = self.client.table("calls").select("count").execute()
+            
+            # Get calls by status
+            pending_calls = self.client.table("calls").select("count").eq("status", "pending").execute()
+            in_progress_calls = self.client.table("calls").select("count").eq("status", "in_progress").execute()
+            completed_calls = self.client.table("calls").select("count").eq("status", "completed").execute()
+            failed_calls = self.client.table("calls").select("count").eq("status", "failed").execute()
+            
+            # Get recent calls
+            recent_calls = self.client.table("calls").select("*").order("created_at", desc=True).limit(10).execute()
+            
+            return {
+                "total_calls": len(total_calls.data) if total_calls.data else 0,
+                "pending": len(pending_calls.data) if pending_calls.data else 0,
+                "in_progress": len(in_progress_calls.data) if in_progress_calls.data else 0,
+                "completed": len(completed_calls.data) if completed_calls.data else 0,
+                "failed": len(failed_calls.data) if failed_calls.data else 0,
+                "recent_calls": recent_calls.data[:5] if recent_calls.data else []
+            }
+        except Exception as e:
+            logger.error(f"Failed to get call statistics: {str(e)}")
+            return {"error": str(e)}
+    
+    async def cleanup_old_calls(self, days: int = 30) -> int:
+        """Clean up old call records (optional maintenance function)"""
+        try:
+            # This is a placeholder - implement based on your retention needs
+            logger.info(f"Cleanup function called for calls older than {days} days")
+            return 0
+        except Exception as e:
+            logger.error(f"Failed to cleanup old calls: {str(e)}")
+            return 0
 
 # Global database instance
 db = Database()

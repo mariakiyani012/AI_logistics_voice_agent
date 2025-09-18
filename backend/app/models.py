@@ -121,6 +121,12 @@ class SummaryResponse(BaseModel):
         from_attributes = True
 
 # Generic response models
+class ApiResponse(BaseModel):
+    success: bool
+    message: str
+    data: Optional[Any] = None
+
+# Generic response models
 class MessageResponse(BaseModel):
     message: str
 
