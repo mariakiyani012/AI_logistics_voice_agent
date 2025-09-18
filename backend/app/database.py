@@ -3,12 +3,23 @@ from supabase import create_client, Client
 from .config import settings
 import logging
 from typing import List, Dict, Optional, Any, Literal
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-# Type hints for ENUMs
-CallStatus = Literal["pending", "in_progress", "completed", "failed", "cancelled"]
-ScenarioType = Literal["dispatch", "emergency"]
+# Use Enum classes to match PostgreSQL enums exactly
+
+class CallStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class ScenarioType(str, Enum):
+    DISPATCH = "dispatch"
+    EMERGENCY = "emergency"
+
 
 class Database:
     def __init__(self):
@@ -74,14 +85,15 @@ class Database:
             logger.error(f"Failed to insert call: {str(e)}")
             return None
     
-    async def update_call_status(self, call_id: str, status: CallStatus = None, **kwargs) -> Optional[Dict]:
+    # async def update_call_status(self, call_id: str, status: CallStatus = None, **kwargs) -> Optional[Dict]:
+    async def update_call_status(self, call_id: str, status: Optional[CallStatus] = None, **kwargs) -> Optional[Dict]:
         """Update call status and other fields"""
         try:
             update_data = {}
             
             # Only update status if provided
             if status is not None:
-                update_data["status"] = status
+                update_data["status"] = status.value
             
             # Add all other fields
             update_data.update(kwargs)

@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # App Configuration
     environment: str = "development"
     debug: bool = True
-    webhook_base_url: Optional[str] = None
+    webhook_base_url: str = "https://4dac8660024a.ngrok-free.app"
     frontend_url: str = "http://localhost:3000"
     
     class Config:

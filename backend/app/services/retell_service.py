@@ -11,7 +11,7 @@ class RetellService:
     def __init__(self):
         self.api_key = settings.retell_api_key
         self.base_url = "https://api.retellai.com"
-        self.webhook_url = f"{settings.webhook_base_url}/webhook/retell"
+        self.webhook_url = f"{settings.webhook_base_url}/websocket/retell"
         self._account_cache = None
         self._phone_cache = None
     

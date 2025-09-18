@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from .config import settings
 from .database import db  # Missing import added
-from .routers import agent, calls, webhook
+from .routers import agent, calls, webhook, llm_socket
 import logging
 
 # Configure logging
@@ -63,7 +63,8 @@ async def test_database():
 # Include routers
 app.include_router(agent.router, prefix="/api")
 app.include_router(calls.router, prefix="/api")
-app.include_router(webhook.router)  # Remove /api prefix for webhooks
+app.include_router(webhook.router)  
+app.include_router(llm_socket.router) 
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)

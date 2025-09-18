@@ -80,7 +80,7 @@ CallStatus = Literal["pending", "in_progress", "completed", "failed", "cancelled
 class CallTrigger(BaseModel):
     agent_id: str = Field(..., description="Agent ID to use for the call")
     driver_name: str = Field(..., min_length=1, max_length=100)
-    driver_phone: str = Field(..., pattern=r'^\+?1?[0-9]{10,15}$')
+    driver_phone: str = Field(..., pattern=r'^\+?[1-9]\d{1,14}$')
     load_number: str = Field(..., min_length=1, max_length=50)
 
 class CallResponse(BaseModel):
@@ -125,11 +125,3 @@ class ApiResponse(BaseModel):
     success: bool
     message: str
     data: Optional[Any] = None
-
-# Generic response models
-class MessageResponse(BaseModel):
-    message: str
-
-class ErrorResponse(BaseModel):
-    error: str
-    detail: Optional[str] = None
